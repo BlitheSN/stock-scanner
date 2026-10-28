@@ -1,0 +1,6 @@
+yfinance
+mplfinance
+pandas
+lxml
+html5lib
+requests
