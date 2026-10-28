@@ -10,11 +10,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-- name: Install dependencies
-  run: pip install -r requirements.txt
-      - run: pip install yfinance mplfinance requests
-      - run: python scan.py
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run scanner
+        run: python scan.py
         env:
           ULTRA_TOKEN: ${{ secrets.ULTRA_TOKEN }}
           ULTRA_INSTANCE: ${{ secrets.ULTRA_INSTANCE }}
