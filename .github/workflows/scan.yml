@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run scanner
-        run: python backtest.py
+        run: python scan.py
         env:
           ULTRA_TOKEN: ${{ secrets.ULTRA_TOKEN }}
           ULTRA_INSTANCE: ${{ secrets.ULTRA_INSTANCE }}
