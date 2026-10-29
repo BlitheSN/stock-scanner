@@ -71,7 +71,7 @@ def check_stock(ticker):
         cond_1 = (last['Close'] < ma20_now) and (ma20_now - ma20_5d < 0)
         cond_2 = (prev['Close'] < prev['Open'] and last['Close'] > last['Open'] and last['Open'] < prev['Close'] and last['Close'] > prev['Open'])
         cond_3 = last['Volume'] > vol_ma20 * VOL_MULTIPLE
-        cond_4 = last['Close'] > ma55w_now
+        cond_4 = True  # 取消55W，602隻版
 
         if cond_1 and cond_2 and cond_3 and cond_4:
             ratio = last['Volume'] / vol_ma20
