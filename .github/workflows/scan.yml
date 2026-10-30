@@ -19,3 +19,9 @@ jobs:
         env:
           ULTRA_TOKEN: ${{ secrets.ULTRA_TOKEN }}
           ULTRA_INSTANCE: ${{ secrets.ULTRA_INSTANCE }}
+  winrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install yfinance pandas
+      - run: python winrate.py
