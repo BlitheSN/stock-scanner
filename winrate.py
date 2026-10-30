@@ -1,4 +1,3 @@
-# winrate.py - 放喺你個stock scan repo
 import yfinance as yf, pandas as pd
 from datetime import timedelta
 
@@ -23,19 +22,38 @@ triggers = [
 
 rows=[]
 for d,t in triggers:
-    df = yf.download(t, start=pd.to_datetime(d)-timedelta(days=7), end=pd.to_datetime(d)+timedelta(days=20), auto_adjust=True, progress=False)
-    if len(df)<5: continue
-    t_idx = df.index.get_indexer([pd.to_datetime(d)], method='bfill')[0]
-    trigger_low = float(df.iloc[t_idx]['Low'])
-    if t_idx+2 >= len(df): continue
-    buy = float(df.iloc[t_idx+2]['Open'])
-    fwd = df.iloc[t_idx+3:t_idx+13]
-    hit = (fwd['Low'] < trigger_low).any()
-    pnl = float(fwd.iloc[-1]['Close'] - buy)/buy*100
-    rows.append([d,t,trigger_low,buy,hit,pnl])
+    try:
+        df = yf.download(t, start=pd.to_datetime(d)-timedelta(days=7), end=pd.to_datetime(d)+timedelta(days=20), auto_adjust=True, progress=False, group_by='column')
+        if df.empty or len(df)<5:
+            continue
+        # 新版yfinance會係MultiIndex，拍平佢
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        
+        t_idx = df.index.get_indexer([pd.to_datetime(d)], method='bfill')[0]
+        trigger_low = float(df.iloc[t_idx]['Low'])
+        if t_idx+2 >= len(df):
+            continue
+        buy = float(df.iloc[t_idx+2]['Open'])
+        fwd = df.iloc[t_idx+3:t_idx+13]
+        if fwd.empty:
+            continue
+        hit = bool((fwd['Low'] < trigger_low).any())
+        pnl = float(fwd.iloc[-1]['Close'] - buy)/buy*100
+        rows.append([d,t,trigger_low,buy,hit,pnl])
+    except Exception as e:
+        print(f"Skip {t} {d}: {e}")
+        continue
 
 res=pd.DataFrame(rows, columns=["date","ticker","stop_low","buy_T2_open","hit_stop","pnl_10d"])
-res["win"] = (~res["hit_stop"]) & (res["pnl_10d"]>0)
-print(res)
-print(f"\n勝率: {res['win'].mean()*100:.1f}% | 止損率: {res['hit_stop'].mean()*100:.1f}% | 平均10日: {res['pnl_10d'].mean():.2f}%")
-res.to_csv("winrate_result.csv", index=False)
+if not res.empty:
+    res["win"] = (~res["hit_stop"]) & (res["pnl_10d"]>0)
+    print(res.to_string(index=False))
+    print(f"\n=== 總結 ===")
+    print(f"總數: {len(res)}")
+    print(f"勝率(10日冇掂止損+賺): {res['win'].mean()*100:.1f}%")
+    print(f"止損率: {res['hit_stop'].mean()*100:.1f}%")
+    print(f"平均10日回報: {res['pnl_10d'].mean():.2f}%")
+    res.to_csv("winrate_result.csv", index=False)
+else:
+    print("No data")
