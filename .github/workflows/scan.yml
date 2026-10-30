@@ -1,33 +1,32 @@
 name: Stock Scan
 on:
   schedule:
-    - cron: '30 0 * * 1-5'   # 香港 08:30 跑 (掃美股)
-    - cron: '30 8 * * 1-5'   # 香港 16:30 跑 (掃港股)
+    - cron: '30 0 * * 1-5'
+    - cron: '30 8 * * 1-5'
   workflow_dispatch:
 jobs:
-  scan:
+  scan-and-winrate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt yfinance pandas
       - name: Run scanner
         run: python scan.py
         env:
           ULTRA_TOKEN: ${{ secrets.ULTRA_TOKEN }}
           ULTRA_INSTANCE: ${{ secrets.ULTRA_INSTANCE }}
-
-  winrate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install winrate deps
-        run: pip install yfinance pandas
-      - name: Run winrate
+          TO_NUMBER: ${{ secrets.TO_NUMBER }}
+      - name: Run winrate with history
         run: python winrate.py
+      - name: Commit history
+        run: |
+          git config user.name "bot"
+          git config user.email "bot@github"
+          git add triggers_history.csv winrate_result.csv || true
+          git diff --staged --quiet || git commit -m "auto update rockets history"
+          git push || true
