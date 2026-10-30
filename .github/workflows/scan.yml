@@ -1,8 +1,8 @@
 name: Stock Scan
 on:
   schedule:
-    - cron: '15 8 * * 1-5'
-    - cron: '45 14 * * 1-5'
+    - cron: '30 0 * * 1-5'   # 香港 08:30 跑 (掃美股)
+    - cron: '30 8 * * 1-5'   # 香港 16:30 跑 (掃港股)
   workflow_dispatch:
 jobs:
   scan:
