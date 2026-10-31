@@ -15,12 +15,11 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install deps
-        run: pip install yfinance pandas requests
+        run: pip install yfinance pandas requests lxml html5lib
       - name: Run scan
         env:
-          ULTRA_TOKEN: ${{ secrets.ULTRA_TOKEN }}
-          ULTRA_INSTANCE: ${{ secrets.ULTRA_INSTANCE }}
-          TO_NUMBER: ${{ secrets.TO_NUMBER }}
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
         run: python scan.py
       - name: Commit history
         run: |
