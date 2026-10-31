@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import os
 import requests
+import urllib.parse
 from datetime import datetime
 
 HISTORY_US = "triggers_history.csv"
@@ -47,14 +48,19 @@ def check_trigger(df):
     return cond1 and cond2 and cond3, close, low
 
 def send_whatsapp(msg):
-    token = os.getenv("ULTRA_TOKEN")
-    instance = os.getenv("ULTRA_INSTANCE")
-    to = os.getenv("TO_NUMBER")
-    if not token or not instance or not to: print("Missing secrets"); return
-    url = f"https://api.ultramsg.com/{instance}/messages/chat"
-    data = {"token": token, "to": to, "body": msg}
-    r = requests.post(url, data=data)
-    print(r.text)
+    # === 永久版 CallMeBot ===
+    phone = os.getenv("CALLMEBOT_PHONE")
+    apikey = os.getenv("CALLMEBOT_APIKEY")
+    if not phone or not apikey:
+        print("Missing CALLMEBOT_PHONE / CALLMEBOT_APIKEY secrets")
+        return
+    text = urllib.parse.quote(msg)
+    url = f"https://api.callmebot.com/whatsapp.php?phone={phone}&text={text}&apikey={apikey}"
+    try:
+        r = requests.get(url, timeout=20)
+        print("CallMeBot:", r.text)
+    except Exception as e:
+        print(f"Send failed: {e}")
 
 def scan_list(tickers, is_hk=False):
     new_rows = []
