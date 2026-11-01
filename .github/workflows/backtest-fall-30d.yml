@@ -1,0 +1,72 @@
+name: 30日回測 - 跌版
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backtest-fall:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install yfinance pandas
+      - name: Run 30d backtest FALL
+        run: |
+          python - << 'PY'
+          import yfinance as yf, pandas as pd, os
+          from datetime import datetime
+
+          def check_fall_trigger(df):
+              if len(df) < 25: return False
+              close = df['Close'].iloc[-1]
+              ma20 = df['Close'].rolling(20).mean().iloc[-1]
+              ma20_prev = df['Close'].rolling(20).mean().iloc[-2]
+              # 跌版：MA20上 + MA20向上
+              if not (close > ma20 and ma20 > ma20_prev): return False
+              prev, curr = df.iloc[-2], df.iloc[-1]
+              # 陰吞陽
+              cond2 = prev['Close'] > prev['Open'] and curr['Close'] < curr['Open'] and curr['Close'] < prev['Open'] and curr['Open'] > prev['Close']
+              vol_ma = df['Volume'].rolling(20).mean().iloc[-1]
+              cond3 = df['Volume'].iloc[-1] > vol_ma * 1.5 if vol_ma else False
+              return cond2 and cond3
+
+          with open("tickers.txt") as f:
+              tickers = [l.strip() for l in f if l.strip()]
+
+          print(f"回測股票數: {len(tickers)}隻, 過去30個交易日 - 跌版")
+
+          hits = []
+          for ticker in tickers:
+              try:
+                  df = yf.Ticker(ticker).history(period="90d")
+                  if len(df) < 50: continue
+                  for i in range(len(df)-30-20, len(df)-20):
+                      sub = df.iloc[:i+1]
+                      if check_fall_trigger(sub):
+                          price = sub['Close'].iloc[-1]
+                          date = sub.index[-1].strftime("%Y-%m-%d")
+                          fut = df.iloc[i+1:i+21]
+                          if len(fut)>=20:
+                              r20 = (fut['Close'].iloc[19]-price)/price*100
+                              hits.append((date, ticker, round(price,2), round(r20,2)))
+              except: continue
+
+          df_out = pd.DataFrame(hits, columns=["觸發日","Ticker","觸發價","20日後%"])
+          df_out = df_out.sort_values("觸發日")
+          print(df_out.to_string(index=False))
+          print(f"\n=== 總結 - 跌版 ===")
+          print(f"30日內總共觸發: {len(df_out)} 次")
+          if not df_out.empty:
+              print(f"20日平均回報: {df_out['20日後%'].mean():+.2f}% (負數代表跌，正EV)")
+              print(f"20日下跌勝率: {(df_out['20日後%']<0).mean()*100:.1f}%")
+              print(f"跌>5% 勝率: {(df_out['20日後%']<-5).mean()*100:.1f}%")
+              print(f"\n最近10隻:\n{df_out.tail(10).to_string(index=False)}")
+              df_out.to_csv("backtest_fall_30d_result.csv", index=False)
+          PY
+      - name: Upload result FALL
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-fall-result
+          path: backtest_fall_30d_result.csv
