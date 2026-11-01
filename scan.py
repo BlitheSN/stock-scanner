@@ -10,28 +10,14 @@ HISTORY_HK = "hk_triggers_history.csv"
 TICKERS_FILE = "tickers.txt"
 
 def get_us_tickers():
-    # 1. 優先用你tickers.txt入面嗰611隻
-    if os.path.exists(TICKERS_FILE):
-        try:
-            with open(TICKERS_FILE, "r") as f:
-                tickers = [line.strip() for line in f if line.strip()]
-                if len(tickers) > 100:
-                    print(f"用 tickers.txt: {len(tickers)}隻")
-                    return tickers
-        except: pass
-    # 2. 冇就抓S&P500
-    try:
-        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-        table = pd.read_html(url)[0]
-        tickers = table['Symbol'].str.replace('.', '-', regex=False).tolist()
-        print(f"用 S&P500: {len(tickers)}隻")
-        return tickers
-    except:
-        return ["AAPL","MSFT","NVDA","AMZN","META","GOOGL","MGM","LVS"]
+    with open(TICKERS_FILE, "r") as f:
+        tickers = [line.strip() for line in f if line.strip()]
+    print(f"鎖定 tickers.txt: {len(tickers)}隻")
+    return tickers
 
 US_TICKERS = get_us_tickers()
-HK_TICKERS = ["0700.HK","0005.HK","0941.HK","0939.HK","1398.HK","1299.HK","2318.HK","0388.HK","0883.HK","0857.HK","2628.HK","3968.HK","2319.HK","0011.HK","2388.HK","0006.HK","0003.HK","0002.HK","1038.HK","0001.HK","0016.HK","1019.HK","1109.HK","1209.HK","1997.HK","0960.HK","1093.HK","2269.HK","3690.HK","1810.HK","9988.HK","9618.HK","1024.HK","9888.HK","9999.HK","2015.HK","1818.HK","0288.HK","0358.HK","0669.HK","1211.HK","0175.HK","0968.HK","2020.HK","2313.HK","0291.HK","0661.HK","1177.HK","2018.HK","2800.HK","2382.HK","1347.HK","0267.HK","1928.HK"]
-HK_TICKERS = list(dict.fromkeys(HK_TICKERS))
+HK_TICKERS = [t for t in US_TICKERS if t.endswith(".HK")]
+US_TICKERS = [t for t in US_TICKERS if not t.endswith(".HK")]
 
 def check_trigger(df):
     if len(df) < 25: return False,0,0
@@ -48,19 +34,12 @@ def check_trigger(df):
     return cond1 and cond2 and cond3, close, low
 
 def send_whatsapp(msg):
-    # === 永久版 CallMeBot ===
     phone = os.getenv("CALLMEBOT_PHONE")
     apikey = os.getenv("CALLMEBOT_APIKEY")
-    if not phone or not apikey:
-        print("Missing CALLMEBOT_PHONE / CALLMEBOT_APIKEY secrets")
-        return
-    text = urllib.parse.quote(msg)
-    url = f"https://api.callmebot.com/whatsapp.php?phone={phone}&text={text}&apikey={apikey}"
-    try:
-        r = requests.get(url, timeout=20)
-        print("CallMeBot:", r.text)
-    except Exception as e:
-        print(f"Send failed: {e}")
+    if not phone or not apikey: return
+    url = f"https://api.callmebot.com/whatsapp.php?phone={phone}&text={urllib.parse.quote(msg)}&apikey={apikey}"
+    try: requests.get(url, timeout=20)
+    except: pass
 
 def scan_list(tickers, is_hk=False):
     new_rows = []
@@ -90,9 +69,9 @@ for file, rows in [(HISTORY_US, us_new), (HISTORY_HK, hk_new)]:
         df_all.to_csv(file, index=False)
 
 msg = f"📊 掃描結果 {datetime.now().strftime('%Y-%m-%d %H:%M HKT')}\n"
-msg += f"掃描數: 美股{len(US_TICKERS)}隻 + 港股{len(HK_TICKERS)}隻\n\n"
+msg += f"掃描數: 美股{len(US_TICKERS)}隻 + 港股{len(HK_TICKERS)}隻 = {len(US_TICKERS)+len(HK_TICKERS)}隻 (已鎖定)\n\n"
 msg += f"🇺🇸 美股觸發: {len(us_new)}隻\n" + ("\n".join([f"{x[1]} 收:{x[2]}" for x in us_new]) if us_new else "今日0隻") + "\n\n"
-msg += f"🇭🇰 港股觸發: {len(hk_new)}隻 (市值>200億)\n" + ("\n".join([f"{x[1]} 收:{x[2]}" for x in hk_new]) if hk_new else "今日0隻")
+msg += f"🇭🇰 港股觸發: {len(hk_new)}隻\n" + ("\n".join([f"{x[1]} 收:{x[2]}" for x in hk_new]) if hk_new else "今日0隻")
 
 print(msg)
 send_whatsapp(msg)
