@@ -1,0 +1,22 @@
+name: Fall Scan
+
+on:
+  schedule:
+    - cron: '0 1 * * 1-5'   # 09:00 HKT = 01:00 UTC
+    - cron: '0 9 * * 1-5'   # 17:00 HKT = 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install yfinance pandas requests
+      - name: Run Fall Scan
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: python scan_fall.py
