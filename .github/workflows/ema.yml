@@ -1,0 +1,29 @@
+name: Stock Scan EMA
+on:
+  schedule:
+        - cron: '45 0 * * 1-5'  # 08:45 HKT
+        - cron: '45 8 * * 1-5'  # 16:45 HKT
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+            - name: Install deps
+        run: pip install yfinance pandas requests lxml html5lib
+            - name: Run EMA scan
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: python scan_ema.py
+            - name: Commit history
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@bot.com"
+          git add ema_triggers_history.csv || true
+          git commit -m "update ema history" || true
+          git push || true
