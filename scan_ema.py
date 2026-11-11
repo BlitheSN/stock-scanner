@@ -51,7 +51,7 @@ if len(results) == 0:
     msg += "今日無觸發"
 else:
     for _, r in df_out.sort_values('Vol_Ratio', ascending=False).iterrows():
-        msg += f"\n{r['Ticker']} ${r['Close']:.2f} 量{r['Vol_Ratio']:.2f}x EMA12 {r['EMA12']:.2f} > {r['EMA25']:.2f}"
+        msg += f"\n{r['Ticker']} {r['Close']:.2f} 量{r['Vol_Ratio']:.2f}x EMA12 {r['EMA12']:.2f} > {r['EMA25']:.2f}"
 
 print(msg)
 
